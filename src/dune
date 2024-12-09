@@ -4,7 +4,7 @@
  (libraries cstruct lwt mirage-block mirage-unikraft fmt)
  (foreign_stubs
   (language c)
-  (names unikraft_block_stubs)))
+  (names unikraft_block_stubs misc)))
 
 (rule
  (target unikraft_block_stubs.c)
