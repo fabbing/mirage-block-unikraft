@@ -1,0 +1,30 @@
+opam-version: "2.0"
+maintainer:   "fabrice@tarides.com"
+homepage:     "https://github.com/fabbing/mirage-block-unikraft"
+dev-repo:     "git+https://github.com/fabbing/mirage-block-unikraft.git"
+bug-reports:  "https://github.com/fabbing/mirage-block-unikraft/issues"
+doc:           "https://mirage.github.io/mirage-block-unikraft/"
+license:       "ISC"
+authors:      ["Fabrice Buoro" "Samuel Hym"]
+tags: [
+  "org:mirage"
+]
+
+build: [
+ ["dune" "subst"] {dev}
+ ["dune" "build" "-p" name "-j" jobs]
+ ["dune" "runtest" "-p" name] {with-test}
+]
+
+depends: [
+  "ocaml" {>= "4.08.0"}
+  "dune"  {>= "2.0"}
+  "lwt" {>= "2.4.3"}
+  "cstruct" {>= "6.0.0"}
+  "mirage-block" {>= "2.0.0"}
+  "mirage-unikraft" {>= "0.0.1"}
+  "fmt" {>= "0.8.7"}
+]
+synopsis: "Unikraft implementation of MirageOS block interface"
+description:
+  "This library implements the MirageOS block interface for Unikraft targets."

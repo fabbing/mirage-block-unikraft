@@ -1,0 +1,13 @@
+(library
+ (name block)
+ (public_name mirage-block-unikraft)
+ (libraries cstruct lwt mirage-block mirage-unikraft fmt)
+ (foreign_stubs
+  (language c)
+  (names unikraft_block_stubs)))
+
+(rule
+ (target unikraft_block_stubs.c)
+ (deps unikraft_block_stubs.unikraft.c unikraft_block_stubs.default.c)
+ (action
+  (copy unikraft_block_stubs.%{context_name}.c %{target})))
