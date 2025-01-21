@@ -58,9 +58,12 @@ let connect devid =
         Lwt.return t
     | Error msg -> Lwt.fail_with msg
   in
-  let devid = "0" in
-  (* FIXME *)
-  match int_of_string_opt devid with
+  let id =
+    if String.starts_with ~prefix:"block" devid then
+      int_of_string_opt (String.sub devid 5 (String.length devid - 5))
+    else None
+  in
+  match id with
   | Some id when id >= 0 && id < 63 ->
       Log.info (fun f -> f "Plugging into blkdev %d" id);
       aux id
