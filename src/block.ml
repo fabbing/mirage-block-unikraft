@@ -74,17 +74,12 @@ let get_info t =
   
 let check_bounds t sector_start buffer =
   let buff_size = buffer.Cstruct.len in
-  if buff_size mod t.info.sector_size != 0
-  then Error `Buffer_alignment
-  else (
-    let io_size = Int64.(add (mul sector_start (of_int t.info.sector_size))
-      (of_int buff_size))
+  if buff_size mod t.info.sector_size <> 0 then Error `Buffer_alignment
+  else
+    let end_ =
+      Int64.(add sector_start (of_int (buff_size / t.info.sector_size)))
     in
-    let disk_size = Int64.(mul t.info.size_sectors (of_int t.info.sector_size))
-    in
-    if sector_start >= t.info.size_sectors || io_size > disk_size
-    then Error `Invalid_argument
-    else Ok ())
+    if end_ > t.info.size_sectors then Error `Invalid_argument else Ok ()
 
 let rec read t sector_start buffers =
   Log.info (fun f -> f "read: on dev #%d at %Ld" t.id sector_start);
