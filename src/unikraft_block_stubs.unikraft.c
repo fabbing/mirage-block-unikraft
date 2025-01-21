@@ -9,7 +9,7 @@
 
 block_t blocks[MAX_BLK_DEVICES] = {0};
 
-token_t *get_free_token(block_t *block)
+token_t *acquire_token(block_t *block)
 {
   token_t *token;
 
@@ -75,7 +75,7 @@ int block_io(block_t *block, int write, unsigned int offset, unsigned int size,
         char *buf)
 {
 
-  token_t *token = get_free_token(block);
+  token_t *token = acquire_token(block);
   if (!token) {
     uk_pr_info("No token available");
     return -1;
