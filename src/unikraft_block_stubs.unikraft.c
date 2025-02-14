@@ -267,7 +267,8 @@ value uk_block_info(value v_block)
 int block_read(block_t *block, unsigned int sstart, unsigned int size,
     char *buffer)
 {
-  return block_io(block, 0, sstart, size, buffer);
+  int rc = uk_blkdev_sync_read(block->dev, 0, sstart, size, buffer);
+  return rc == 0 ? 0 : -1;
 }
 
 value uk_block_read(value v_block, value v_sstart, value v_size, value v_buffer)
@@ -281,15 +282,12 @@ value uk_block_read(value v_block, value v_sstart, value v_size, value v_buffer)
   unsigned int sstart = Int64_val(v_sstart);
   unsigned int size = Int_val(v_size);
 
-  const int tokid = block_read(block, sstart, size, buf);
-  if (tokid < 0) {
-    v_result = alloc_result_error("uk_block_read: error");
-    CAMLreturn(v_result);
+  const int rc = block_read(block, sstart, size, buf);
+  if (rc) {
+    CAMLreturn(Val_false);
   }
-  
-  v_result = alloc_result_ok();
-  Store_field(v_result, 0, Val_int(tokid));
-  CAMLreturn(v_result);
+
+  CAMLreturn(Val_true);
 }
 
 // -------------------------------------------------------------------------- //
@@ -297,7 +295,8 @@ value uk_block_read(value v_block, value v_sstart, value v_size, value v_buffer)
 int block_write(block_t *block, unsigned int sstart, unsigned size,
     char *buffer)
 {
-  return block_io(block, 1, sstart, size, buffer);
+  int rc = uk_blkdev_sync_write(block->dev, 0, sstart, size, buffer);
+  return rc == 0 ? 0 : -1;
 }
 
 value uk_block_write(value v_block, value v_sstart, value v_size, value v_buffer)
@@ -311,15 +310,12 @@ value uk_block_write(value v_block, value v_sstart, value v_size, value v_buffer
   unsigned int sstart = Int64_val(v_sstart);
   unsigned int size = Int_val(v_size);
 
-  const int tokid = block_write(block, sstart, size, buf);
-  if (tokid < 0) {
-    v_result = alloc_result_error("uk_block_write: error");
-    CAMLreturn(v_result);
+  const int rc = block_write(block, sstart, size, buf);
+  if (rc) {
+    CAMLreturn(Val_false);
   }
   
-  v_result = alloc_result_ok();
-  Store_field(v_result, 0, Val_int(tokid));
-  CAMLreturn(v_result);
+  CAMLreturn(Val_true);
 }
 
 // -------------------------------------------------------------------------- //

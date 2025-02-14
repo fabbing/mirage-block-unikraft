@@ -4,11 +4,11 @@ external uk_block_init : int -> (block_ptr, string) result = "uk_block_init"
 external uk_block_info : block_ptr -> bool * int * int64 = "uk_block_info"
 
 external uk_block_read :
-  block_ptr -> int64 -> int -> Cstruct.buffer -> (int, string) result
+  block_ptr -> int64 -> int -> Cstruct.buffer -> bool
   = "uk_block_read"
 
 external uk_block_write :
-  block_ptr -> int64 -> int -> Cstruct.buffer -> (int, string) result
+  block_ptr -> int64 -> int -> Cstruct.buffer -> bool
   = "uk_block_write"
 
 external uk_complete_io : block_ptr -> int -> bool = "uk_complete_io"
@@ -92,14 +92,9 @@ let rec read t sector_start buffers =
           let size = buf.Cstruct.len in
           let size = size / t.info.sector_size in
           match uk_block_read t.handle sector_start size buf.Cstruct.buffer with
-          | Ok tokid ->
-              Unikraft_os.Main.UkEngine.wait_for_work_blkdev t.id tokid
-              >>= fun () ->
-              if uk_complete_io t.handle tokid then
-                read t (Int64.add sector_start (Int64.of_int size)) tl
-              else Lwt.return (Error `Unspecified_error)
-          | Error msg ->
-              Log.info (fun f -> f "read: %s" msg);
+          | true -> read t (Int64.add sector_start (Int64.of_int size)) tl
+          | false ->
+              Log.info (fun f -> f "read failed");
               Lwt.return (Error `Unspecified_error)))
 
 let rec write t sector_start buffers =
@@ -115,12 +110,7 @@ let rec write t sector_start buffers =
           match
             uk_block_write t.handle sector_start size buf.Cstruct.buffer
           with
-          | Ok tokid ->
-              Unikraft_os.Main.UkEngine.wait_for_work_blkdev t.id tokid
-              >>= fun () ->
-              if uk_complete_io t.handle tokid then
-                write t (Int64.add sector_start (Int64.of_int size)) tl
-              else Lwt.return (Error `Unspecified_error)
-          | Error msg ->
-              Log.info (fun f -> f "write: %s" msg);
+          | true -> write t (Int64.add sector_start (Int64.of_int size)) tl
+          | false ->
+              Log.info (fun f -> f "write failed");
               Lwt.return (Error `Unspecified_error)))
