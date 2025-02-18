@@ -9,7 +9,7 @@
 
 block_t blocks[MAX_BLK_DEVICES] = {0};
 
-token_t *acquire_token(block_t *block)
+static token_t *acquire_token(block_t *block)
 {
   token_t *token;
 
@@ -24,12 +24,12 @@ token_t *acquire_token(block_t *block)
   return NULL;
 }
 
-unsigned int token_id(block_t *block, token_t *token)
+static unsigned int token_id(block_t *block, token_t *token)
 {
   return token - block->tokens;
 }
 
-void release_token(block_t *block, token_t *token)
+static void release_token(block_t *block, token_t *token)
 {
   unsigned int id = token_id(block, token);
 
@@ -48,7 +48,7 @@ void req_callback(struct uk_blkreq *req, void *cookie)
   signal_block_request_ready(block->id, tok_id);
 }
 
-void init_token(token_t *token, bool write, unsigned int offset,
+static void init_token(token_t *token, bool write, unsigned int offset,
     unsigned int size, char *buf)
 {
   struct uk_blkreq *req = &token->req;
@@ -71,8 +71,8 @@ void queue_callback(struct uk_blkdev *dev, uint16_t queue_id, void *argp)
   }
 }
 
-int block_io(block_t *block, int write, unsigned int offset, unsigned int size,
-        char *buf)
+static int block_io(block_t *block, int write, unsigned int offset,
+    unsigned int size, char *buf)
 {
 
   token_t *token = acquire_token(block);
@@ -264,7 +264,7 @@ value uk_block_info(value v_block)
 
 // -------------------------------------------------------------------------- //
 
-int block_read(block_t *block, unsigned int sstart, unsigned int size,
+static int block_read(block_t *block, unsigned int sstart, unsigned int size,
     char *buffer)
 {
   return block_io(block, 0, sstart, size, buffer);
@@ -294,7 +294,7 @@ value uk_block_read(value v_block, value v_sstart, value v_size, value v_buffer)
 
 // -------------------------------------------------------------------------- //
 
-int block_write(block_t *block, unsigned int sstart, unsigned size,
+static int block_write(block_t *block, unsigned int sstart, unsigned size,
     char *buffer)
 {
   return block_io(block, 1, sstart, size, buffer);
