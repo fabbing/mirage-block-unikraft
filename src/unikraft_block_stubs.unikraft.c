@@ -43,7 +43,6 @@ void req_callback(struct uk_blkreq *req, void *cookie)
   block_t *block = token->block;
 
   unsigned int tok_id = token_id(block, token);
-  const int done = uk_blkreq_is_done(req);
 
   signal_block_request_ready(block->id, tok_id);
 }
