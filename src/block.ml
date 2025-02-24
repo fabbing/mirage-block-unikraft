@@ -2,6 +2,7 @@ type block_ptr = int
 
 external uk_block_init : int -> (block_ptr, string) result = "uk_block_init"
 external uk_block_info : block_ptr -> bool * int * int64 = "uk_block_info"
+external uk_token_max : unit -> int = "uk_token_max"
 
 external uk_block_read :
   block_ptr -> int64 -> int -> Cstruct.buffer -> (int, string) result
@@ -14,12 +15,18 @@ external uk_block_write :
 external uk_complete_io : block_ptr -> int -> bool = "uk_complete_io"
 
 open Lwt.Infix
+let ( let* ) = Lwt.bind
 
 let src = Logs.Src.create "block" ~doc:"Mirage Unikraft block module"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-type t = { id : int; handle : block_ptr; info : Mirage_block.info }
+type t = {
+  id : int;
+  handle : block_ptr;
+  semaphore : Semaphore.t;
+  info : Mirage_block.info
+}
 
 type error =
   [ Mirage_block.error
@@ -52,8 +59,15 @@ let connect devid =
     match uk_block_init id with
     | Ok handle ->
         let read_write, sector_size, size_sectors = uk_block_info handle in
+        let tokens = uk_token_max () in
+        let semaphore = Semaphore.make tokens in
         let t =
-          { id; handle; info = { read_write; sector_size; size_sectors } }
+          {
+            id;
+            handle;
+            semaphore;
+            info = { read_write; sector_size; size_sectors };
+          }
         in
         Lwt.return t
     | Error msg -> Lwt.fail_with msg
@@ -89,16 +103,19 @@ let rec read t sector_start buffers =
       match check_bounds t sector_start buf with
       | Error e -> Lwt.return (Error e)
       | Ok () -> (
-          let size = buf.Cstruct.len in
-          let size = size / t.info.sector_size in
+          let size = buf.Cstruct.len / t.info.sector_size in
+          let* () = Semaphore.acquire t.semaphore in
           match uk_block_read t.handle sector_start size buf.Cstruct.buffer with
           | Ok tokid ->
-              Unikraft_os.Main.UkEngine.wait_for_work_blkdev t.id tokid
-              >>= fun () ->
-              if uk_complete_io t.handle tokid then
-                read t (Int64.add sector_start (Int64.of_int size)) tl
+              let* () =
+                Unikraft_os.Main.UkEngine.wait_for_work_blkdev t.id tokid
+              in
+              let ok = uk_complete_io t.handle tokid in
+              let* () = Semaphore.release t.semaphore in
+              if ok then read t (Int64.add sector_start (Int64.of_int size)) tl
               else Lwt.return (Error `Unspecified_error)
           | Error msg ->
+              let* () = Semaphore.release t.semaphore in
               Log.info (fun f -> f "read: %s" msg);
               Lwt.return (Error `Unspecified_error)))
 
@@ -110,17 +127,20 @@ let rec write t sector_start buffers =
       match check_bounds t sector_start buf with
       | Error e -> Lwt.return (Error e)
       | Ok () -> (
-          let size = buf.Cstruct.len in
-          let size = size / t.info.sector_size in
+          let size = buf.Cstruct.len / t.info.sector_size in
+          let* () = Semaphore.acquire t.semaphore in
           match
             uk_block_write t.handle sector_start size buf.Cstruct.buffer
           with
           | Ok tokid ->
-              Unikraft_os.Main.UkEngine.wait_for_work_blkdev t.id tokid
-              >>= fun () ->
-              if uk_complete_io t.handle tokid then
-                write t (Int64.add sector_start (Int64.of_int size)) tl
+              let* () =
+                Unikraft_os.Main.UkEngine.wait_for_work_blkdev t.id tokid
+              in
+              let ok = uk_complete_io t.handle tokid in
+              let* () = Semaphore.release t.semaphore in
+              if ok then write t (Int64.add sector_start (Int64.of_int size)) tl
               else Lwt.return (Error `Unspecified_error)
           | Error msg ->
+              let* () = Semaphore.release t.semaphore in
               Log.info (fun f -> f "write: %s" msg);
               Lwt.return (Error `Unspecified_error)))

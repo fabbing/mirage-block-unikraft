@@ -18,6 +18,7 @@
 
 struct token_s;
 typedef struct token_s token_t;
+typedef unsigned int token_id_t;
 
 struct token_s {
   struct uk_blkreq  req;

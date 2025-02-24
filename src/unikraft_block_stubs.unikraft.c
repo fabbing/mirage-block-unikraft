@@ -24,14 +24,14 @@ static token_t *acquire_token(block_t *block)
   return NULL;
 }
 
-static unsigned int token_id(block_t *block, token_t *token)
+static token_id_t token_id(block_t *block, token_t *token)
 {
   return token - block->tokens;
 }
 
 static void release_token(block_t *block, token_t *token)
 {
-  unsigned int id = token_id(block, token);
+  token_id_t id = token_id(block, token);
 
   unsigned int mask = ~(1 << id);
   block->infly &= mask;
@@ -42,7 +42,7 @@ void req_callback(struct uk_blkreq *req, void *cookie)
   token_t *token = (token_t*)cookie;
   block_t *block = token->block;
 
-  unsigned int tok_id = token_id(block, token);
+  token_id_t tok_id = token_id(block, token);
 
   signal_block_request_ready(block->id, tok_id);
 }
@@ -66,11 +66,10 @@ void queue_callback(struct uk_blkdev *dev, uint16_t queue_id, void *argp)
   int rc = uk_blkdev_queue_finish_reqs(dev, 0);
   if (rc) {
     uk_pr_err("Error finishing request: %d\n", rc);
-    return;
   }
 }
 
-static int block_io(block_t *block, int write, unsigned int offset,
+static long block_io(block_t *block, int write, unsigned int offset,
     unsigned int size, char *buf)
 {
 
@@ -96,7 +95,7 @@ static int block_io(block_t *block, int write, unsigned int offset,
 
 // -------------------------------------------------------------------------- //
 
-static block_t *block_init(unsigned id)
+static block_t *block_init(unsigned int id)
 {
   block_t *block = &blocks[id];
 
@@ -114,8 +113,7 @@ static block_t *block_init(unsigned id)
   return block;
 }
 
-// TODO Don't leak blkdev on error
-static block_t *block_get(unsigned id, const char **err)
+static block_t *block_get(unsigned int id, const char **err)
 {
   block_t *block;
 
@@ -263,7 +261,7 @@ value uk_block_info(value v_block)
 
 // -------------------------------------------------------------------------- //
 
-static int block_read(block_t *block, unsigned int sstart, unsigned int size,
+static long block_read(block_t *block, unsigned int sstart, unsigned int size,
     char *buffer)
 {
   return block_io(block, 0, sstart, size, buffer);
@@ -280,11 +278,12 @@ value uk_block_read(value v_block, value v_sstart, value v_size, value v_buffer)
   unsigned int sstart = Int64_val(v_sstart);
   unsigned int size = Int_val(v_size);
 
-  const int tokid = block_read(block, sstart, size, buf);
-  if (tokid < 0) {
+  long rc = block_read(block, sstart, size, buf);
+  if (rc < 0) {
     v_result = alloc_result_error("uk_block_read: error");
     CAMLreturn(v_result);
   }
+  token_id_t tokid = (token_id_t)rc;
   
   v_result = alloc_result_ok();
   Store_field(v_result, 0, Val_int(tokid));
@@ -293,7 +292,7 @@ value uk_block_read(value v_block, value v_sstart, value v_size, value v_buffer)
 
 // -------------------------------------------------------------------------- //
 
-static int block_write(block_t *block, unsigned int sstart, unsigned size,
+static long block_write(block_t *block, unsigned int sstart, unsigned size,
     char *buffer)
 {
   return block_io(block, 1, sstart, size, buffer);
@@ -329,7 +328,7 @@ value uk_complete_io(value v_block, value v_token_id)
   CAMLlocal1(v_result);
 
   block_t *block = (block_t*)Ptr_val(v_block);
-  unsigned int token_id = Int_val(v_token_id);
+  token_id_t token_id = Int_val(v_token_id);
   token_t *token = &block->tokens[token_id];
   struct uk_blkreq *request = &token->req;
 
@@ -347,7 +346,9 @@ value uk_complete_io(value v_block, value v_token_id)
 
 // -------------------------------------------------------------------------- //
 
-value do_uk_yield(value unit)
+value uk_token_max(void)
 {
-    uk_sched_yield();
+  CAMLparam0();
+
+  CAMLreturn(Val_int(MAX_BLK_TOKENS));
 }
