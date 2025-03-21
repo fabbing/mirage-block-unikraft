@@ -47,8 +47,8 @@ void req_callback(struct uk_blkreq *req, void *cookie)
   signal_block_request_ready(block->id, tok_id);
 }
 
-static void init_token(token_t *token, bool write, unsigned int offset,
-    unsigned int size, char *buf)
+static void init_token(token_t *token, bool write, unsigned long offset,
+    unsigned long size, char *buf)
 {
   struct uk_blkreq *req = &token->req;
 
@@ -69,8 +69,8 @@ void queue_callback(struct uk_blkdev *dev, uint16_t queue_id, void *argp)
   }
 }
 
-static long block_io(block_t *block, int write, unsigned int offset,
-    unsigned int size, char *buf)
+static long block_io(block_t *block, int write, unsigned long offset,
+    unsigned long size, char *buf)
 {
 
   token_t *token = acquire_token(block);
@@ -261,22 +261,23 @@ value uk_block_info(value v_block)
 
 // -------------------------------------------------------------------------- //
 
-static long block_read(block_t *block, unsigned int sstart, unsigned int size,
+static long block_read(block_t *block, unsigned long sstart, unsigned long size,
     char *buffer)
 {
   return block_io(block, 0, sstart, size, buffer);
 }
 
-value uk_block_read(value v_block, value v_sstart, value v_size, value v_buffer)
+value uk_block_read(value v_block, value v_sstart, value v_size, value v_buffer,
+    value v_offset)
 {
-  CAMLparam4(v_block, v_sstart, v_size, v_buffer);
+  CAMLparam5(v_block, v_sstart, v_size, v_buffer, v_offset);
   CAMLlocal1(v_result);
 
   block_t *block = (block_t*)Ptr_val(v_block);
 
-  uint8_t *buf = (uint8_t *)Caml_ba_data_val(v_buffer);
-  unsigned int sstart = Int64_val(v_sstart);
-  unsigned int size = Int_val(v_size);
+  uint8_t *buf = (uint8_t *)Caml_ba_data_val(v_buffer) + Long_val(v_offset);
+  unsigned long sstart = Int64_val(v_sstart);
+  unsigned long size = Long_val(v_size);
 
   long rc = block_read(block, sstart, size, buf);
   if (rc < 0) {
@@ -292,22 +293,23 @@ value uk_block_read(value v_block, value v_sstart, value v_size, value v_buffer)
 
 // -------------------------------------------------------------------------- //
 
-static long block_write(block_t *block, unsigned int sstart, unsigned size,
-    char *buffer)
+static long block_write(block_t *block, unsigned long sstart,
+    unsigned long size, char *buffer)
 {
   return block_io(block, 1, sstart, size, buffer);
 }
 
-value uk_block_write(value v_block, value v_sstart, value v_size, value v_buffer)
+value uk_block_write(value v_block, value v_sstart, value v_size,
+    value v_buffer, value v_offset)
 {
-  CAMLparam4(v_block, v_sstart, v_size, v_buffer);
+  CAMLparam5(v_block, v_sstart, v_size, v_buffer, v_offset);
   CAMLlocal1(v_result);
 
   block_t *block = (block_t*)Ptr_val(v_block);
 
-  uint8_t *buf = (uint8_t *)Caml_ba_data_val(v_buffer);
-  unsigned int sstart = Int64_val(v_sstart);
-  unsigned int size = Int_val(v_size);
+  uint8_t *buf = (uint8_t *)Caml_ba_data_val(v_buffer) + Long_val(v_offset);
+  unsigned long sstart = Int64_val(v_sstart);
+  unsigned long size = Long_val(v_size);
 
   const int tokid = block_write(block, sstart, size, buf);
   if (tokid < 0) {
@@ -346,9 +348,21 @@ value uk_complete_io(value v_block, value v_token_id)
 
 // -------------------------------------------------------------------------- //
 
-value uk_token_max(void)
+value uk_max_tokens(void)
 {
   CAMLparam0();
 
   CAMLreturn(Val_int(MAX_BLK_TOKENS));
+}
+
+// -------------------------------------------------------------------------- //
+
+value uk_max_sectors_per_req(value v_block)
+{
+  CAMLparam1(v_block);
+  CAMLlocal1(v_result);
+
+  block_t *block = (block_t*)Ptr_val(v_block);
+  int sectors = uk_blkdev_max_sec_per_req(block->dev);
+  CAMLreturn(Val_int(sectors));
 }

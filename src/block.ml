@@ -2,14 +2,15 @@ type block_ptr = int
 
 external uk_block_init : int -> (block_ptr, string) result = "uk_block_init"
 external uk_block_info : block_ptr -> bool * int * int64 = "uk_block_info"
-external uk_token_max : unit -> int = "uk_token_max"
+external uk_max_tokens : unit -> int = "uk_max_tokens"
+external uk_max_sectors_per_req : block_ptr -> int = "uk_max_sectors_per_req"
 
 external uk_block_read :
-  block_ptr -> int64 -> int -> Cstruct.buffer -> (int, string) result
+  block_ptr -> int64 -> int -> Cstruct.buffer -> int -> (int, string) result
   = "uk_block_read"
 
 external uk_block_write :
-  block_ptr -> int64 -> int -> Cstruct.buffer -> (int, string) result
+  block_ptr -> int64 -> int -> Cstruct.buffer -> int -> (int, string) result
   = "uk_block_write"
 
 external uk_complete_io : block_ptr -> int -> bool = "uk_complete_io"
@@ -90,52 +91,66 @@ let check_bounds t sector_start buffer =
     in
     if end_ > t.info.size_sectors then Error `Invalid_argument else Ok ()
 
+let capped_buffer buffer limit =
+  let size = Cstruct.length buffer in
+  if size > limit then
+    let capped = Cstruct.sub buffer 0 limit in
+    let rest = Cstruct.sub buffer limit (size - limit) in
+    capped, Some rest
+  else
+    buffer, None
+
+let generic_io io_kind t sector_start buffer =
+  Log.info (fun f -> f "generic_io: on dev #%d at %Ld" t.id sector_start);
+  let max_size = uk_max_sectors_per_req t.handle * t.info.sector_size in
+  let rec aux sector_start buffer =
+    let capped, rest = capped_buffer buffer max_size in
+    let ssize = Cstruct.length capped / t.info.sector_size in
+    let* () = Semaphore.acquire t.semaphore in
+    match
+      io_kind t.handle sector_start ssize capped.Cstruct.buffer
+        capped.Cstruct.off
+    with
+    | Ok tokid ->
+        let* () = Unikraft_os.Main.UkEngine.wait_for_work_blkdev t.id tokid in
+        let ok = uk_complete_io t.handle tokid in
+        let* () = Semaphore.release t.semaphore in
+        if ok then
+          match rest with
+          | Some buf -> aux Int64.(add sector_start (of_int ssize)) buf
+          | None -> Lwt.return (Ok ())
+        else Lwt.return (Error `Unspecified_error)
+    | Error msg ->
+        let* () = Semaphore.release t.semaphore in
+        Log.info (fun f -> f "generic_io: %s" msg);
+        Lwt.return (Error `Unspecified_error)
+  in
+  aux sector_start buffer
+
 let rec read t sector_start buffers =
-  Log.info (fun f -> f "read: on dev #%d at %Ld" t.id sector_start);
+  Log.info (fun f -> f "Read: on dev #%d at %Ld" t.id sector_start);
   match buffers with
   | [] -> Lwt.return (Ok ())
   | buf :: tl -> (
       match check_bounds t sector_start buf with
-      | Error e -> Lwt.return (Error e)
       | Ok () -> (
-          let size = buf.Cstruct.len / t.info.sector_size in
-          let* () = Semaphore.acquire t.semaphore in
-          match uk_block_read t.handle sector_start size buf.Cstruct.buffer with
-          | Ok tokid ->
-              let* () =
-                Unikraft_os.Main.UkEngine.wait_for_work_blkdev t.id tokid
-              in
-              let ok = uk_complete_io t.handle tokid in
-              let* () = Semaphore.release t.semaphore in
-              if ok then read t (Int64.add sector_start (Int64.of_int size)) tl
-              else Lwt.return (Error `Unspecified_error)
-          | Error msg ->
-              let* () = Semaphore.release t.semaphore in
-              Log.info (fun f -> f "read: %s" msg);
-              Lwt.return (Error `Unspecified_error)))
+          generic_io uk_block_read t sector_start buf >>= function
+          | Ok () ->
+              let ssize = (Cstruct.length buf) / t.info.sector_size in
+              read t Int64.(add sector_start (of_int ssize)) tl
+          | Error _ as e -> Lwt.return e)
+      | Error _ as e -> Lwt.return e)
 
 let rec write t sector_start buffers =
-  Log.info (fun f -> f "write: on dev #%d at %Ld" t.id sector_start);
+  Log.info (fun f -> f "Write: on dev #%d at %Ld" t.id sector_start);
   match buffers with
   | [] -> Lwt.return (Ok ())
   | buf :: tl -> (
       match check_bounds t sector_start buf with
-      | Error e -> Lwt.return (Error e)
       | Ok () -> (
-          let size = buf.Cstruct.len / t.info.sector_size in
-          let* () = Semaphore.acquire t.semaphore in
-          match
-            uk_block_write t.handle sector_start size buf.Cstruct.buffer
-          with
-          | Ok tokid ->
-              let* () =
-                Unikraft_os.Main.UkEngine.wait_for_work_blkdev t.id tokid
-              in
-              let ok = uk_complete_io t.handle tokid in
-              let* () = Semaphore.release t.semaphore in
-              if ok then write t (Int64.add sector_start (Int64.of_int size)) tl
-              else Lwt.return (Error `Unspecified_error)
-          | Error msg ->
-              let* () = Semaphore.release t.semaphore in
-              Log.info (fun f -> f "write: %s" msg);
-              Lwt.return (Error `Unspecified_error)))
+          generic_io uk_block_write t sector_start buf >>= function
+          | Ok () ->
+              let ssize = (Cstruct.length buf) / t.info.sector_size in
+              read t Int64.(add sector_start (of_int ssize)) tl
+          | Error _ as e -> Lwt.return e)
+      | Error _ as e -> Lwt.return e)
