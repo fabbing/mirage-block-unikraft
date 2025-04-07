@@ -29,7 +29,7 @@ typedef struct block_s {
   struct uk_blkdev  *dev;
   struct uk_alloc   *alloc;
   token_t           *tokens;
-  unsigned int      infly;
+  unsigned long     infly;
   unsigned int      id;
 } block_t;
 
