@@ -60,7 +60,7 @@ let connect devid =
     match uk_block_init id with
     | Ok handle ->
         let read_write, sector_size, size_sectors = uk_block_info handle in
-        let tokens = uk_token_max () in
+        let tokens = uk_max_tokens () in
         let semaphore = Semaphore.make tokens in
         let t =
           {
@@ -77,7 +77,7 @@ let connect devid =
   | Some id when id >= 0 && id < 63 ->
       Log.info (fun f -> f "Plugging into blkdev %d" id);
       aux id
-  | _ -> Lwt.fail_with (Fmt.str "Blkdev: connect(%s): Invalid argument" devid)
+  | _ -> Lwt.fail_with (Fmt.str "Blkdev: connect(%s): Invalid argument, block ids should be integers on this platform" devid)
 
 let disconnect _t = Lwt.return_unit
 let get_info t = Lwt.return t.info
