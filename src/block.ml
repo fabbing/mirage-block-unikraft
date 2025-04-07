@@ -60,7 +60,7 @@ let connect devid =
     match uk_block_init id with
     | Ok handle ->
         let read_write, sector_size, size_sectors = uk_block_info handle in
-        let tokens = uk_token_max () in
+        let tokens = uk_max_tokens () in
         let semaphore = Semaphore.make tokens in
         let t =
           {

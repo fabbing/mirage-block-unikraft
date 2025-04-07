@@ -14,13 +14,14 @@ static token_t *acquire_token(block_t *block)
   token_t *token;
 
   for (unsigned int i = 0; i < MAX_BLK_TOKENS; i++) {
-    unsigned int pos = 1 << i;
+    unsigned long pos = 1L << i;
     if ((block->infly & pos) == 0) {
       token = &block->tokens[i];
       block->infly |= pos;
       return token;
     }
   }
+  assert(uk_blkreq_is_done(&token->req));
   return NULL;
 }
 
@@ -33,7 +34,7 @@ static void release_token(block_t *block, token_t *token)
 {
   token_id_t id = token_id(block, token);
 
-  unsigned int mask = ~(1 << id);
+  unsigned long mask = ~(1L << id);
   block->infly &= mask;
 }
 
@@ -166,15 +167,16 @@ static int block_configure(block_t *block, const char **err)
     return -1;
   }
 
-  //struct uk_blkdev_queue_info q_info;
-  //rc = uk_blkdev_queue_get_info(block->dev, 0, &q_info);
-  //if (rc) {
-  //  *err = "Error getting device queue information";
-  //  return -1;
-  //}
+  struct uk_blkdev_queue_info q_info;
+  rc = uk_blkdev_queue_get_info(block->dev, 0, &q_info);
+  if (rc) {
+    *err = "Error getting device queue information";
+    return -1;
+  }
 
   //printf("queue_info.nb_max = %d, .nb_min = %d, .nb_align = %d, nb_pow_two = %d\n",
   //        q_info.nb_max, q_info.nb_min, q_info.nb_align, q_info.nb_is_power_of_two);
+  assert(MAX_BLK_TOKENS < queue_info.nb_max);
 
   struct uk_blkdev_queue_conf q_conf = { 0 };
   q_conf.a = block->alloc;
