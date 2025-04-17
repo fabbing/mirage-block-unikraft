@@ -87,7 +87,6 @@ static long block_io(block_t *block, int write, unsigned long offset,
 
   token_t *token = acquire_token(block);
   if (!token) {
-    uk_pr_info("No token available");
     return -1;
   }
   init_token(token, write, offset, size, buf);
