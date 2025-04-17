@@ -17,7 +17,6 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
-
 type block_ptr = int
 
 external uk_block_init : int -> (block_ptr, string) result = "uk_block_init"
@@ -36,8 +35,8 @@ external uk_block_write :
 external uk_complete_io : block_ptr -> int -> bool = "uk_complete_io"
 
 open Lwt.Infix
-let ( let* ) = Lwt.bind
 
+let ( let* ) = Lwt.bind
 let src = Logs.Src.create "block" ~doc:"Mirage Unikraft block module"
 
 module Log = (val Logs.src_log src : Logs.LOG)
@@ -46,7 +45,7 @@ type t = {
   id : int;
   handle : block_ptr;
   semaphore : Semaphore.t;
-  info : Mirage_block.info
+  info : Mirage_block.info;
 }
 
 type error =
@@ -97,7 +96,12 @@ let connect devid =
   | Some id when id >= 0 && id < 63 ->
       Log.info (fun f -> f "Plugging into blkdev %d" id);
       aux id
-  | _ -> Lwt.fail_with (Fmt.str "Blkdev: connect(%s): Invalid argument, block ids should be integers on this platform" devid)
+  | _ ->
+      Lwt.fail_with
+        (Fmt.str
+           "Blkdev: connect(%s): Invalid argument, block ids should be \
+            integers on this platform"
+           devid)
 
 let disconnect _t = Lwt.return_unit
 let get_info t = Lwt.return t.info
@@ -116,9 +120,8 @@ let capped_buffer buffer limit =
   if size > limit then
     let capped = Cstruct.sub buffer 0 limit in
     let rest = Cstruct.sub buffer limit (size - limit) in
-    capped, Some rest
-  else
-    buffer, None
+    (capped, Some rest)
+  else (buffer, None)
 
 let generic_io io_kind t sector_start buffer =
   Log.info (fun f -> f "generic_io: on dev #%d at %Ld" t.id sector_start);
@@ -156,7 +159,7 @@ let rec read t sector_start buffers =
       | Ok () -> (
           generic_io uk_block_read t sector_start buf >>= function
           | Ok () ->
-              let ssize = (Cstruct.length buf) / t.info.sector_size in
+              let ssize = Cstruct.length buf / t.info.sector_size in
               read t Int64.(add sector_start (of_int ssize)) tl
           | Error _ as e -> Lwt.return e)
       | Error _ as e -> Lwt.return e)
@@ -170,7 +173,7 @@ let rec write t sector_start buffers =
       | Ok () -> (
           generic_io uk_block_write t sector_start buf >>= function
           | Ok () ->
-              let ssize = (Cstruct.length buf) / t.info.sector_size in
+              let ssize = Cstruct.length buf / t.info.sector_size in
               read t Int64.(add sector_start (of_int ssize)) tl
           | Error _ as e -> Lwt.return e)
       | Error _ as e -> Lwt.return e)
