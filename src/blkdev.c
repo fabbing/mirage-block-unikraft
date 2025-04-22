@@ -1,5 +1,5 @@
 #include "block.h"
-#include "misc.h"
+#include "result.h"
 
 #include <assert.h>
 #include <stdlib.h>

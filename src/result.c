@@ -1,4 +1,4 @@
-#include "misc.h"
+#include "result.h"
 
 #define CAML_NAME_SPACE
 #include <caml/memory.h>
