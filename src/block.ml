@@ -112,7 +112,7 @@ let disconnect _t = Lwt.return_unit
 let get_info t = Lwt.return t.info
 
 let check_bounds t sector_start buffer =
-  let buff_size = buffer.Cstruct.len in
+  let buff_size = Cstruct.length buffer in
   if buff_size mod t.info.sector_size <> 0 then Error `Buffer_alignment
   else
     let end_ =
