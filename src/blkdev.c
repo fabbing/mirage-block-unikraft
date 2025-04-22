@@ -215,6 +215,12 @@ static int block_configure(block_t *block, const char **err)
     return -1;
   }
 
+  const struct uk_blkdev_cap* cap = uk_blkdev_capabilities(block->dev);
+  if (cap->mode == O_WRONLY) {
+    *err = "Device in write-only mode are not supported";
+    return -1;
+  }
+
   rc = uk_blkdev_queue_intr_enable(block->dev, 0);
   if (rc) {
     *err = "Error enalbing interrupt for block device queue";
@@ -265,7 +271,8 @@ value uk_block_info(value v_block)
   const struct uk_blkdev_cap* cap = uk_blkdev_capabilities(block->dev);
 
   v_result = caml_alloc(3, 0);
-  Store_field(v_result, 0, Val_true);                      // ready_write
+  // ready_write
+  Store_field(v_result, 0, (cap->mode == O_RDONLY) ? Val_false : Val_true);
   Store_field(v_result, 1, Val_int(cap->ssize));           // sector size
   Store_field(v_result, 2, caml_copy_int64(cap->sectors)); // number of sectors
   CAMLreturn(v_result);
