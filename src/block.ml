@@ -17,6 +17,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
+
 type block_ptr = int
 
 external uk_block_init : int -> (block_ptr, string) result = "uk_block_init"
@@ -103,8 +104,8 @@ let connect devid =
   | _ ->
       Lwt.fail_with
         (Fmt.str
-           "Blkdev: connect(%s): Invalid argument, block ids should be \
-            integers on this platform"
+           "connect(%s): block ids should be integers between 0 and 62 \
+           (inclusive) on this platform"
            devid)
 
 let disconnect _t = Lwt.return_unit
