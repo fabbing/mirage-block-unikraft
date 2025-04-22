@@ -52,7 +52,8 @@ type error =
   [ Mirage_block.error
   | `Invalid_argument
   | `Unspecified_error
-  | `Buffer_alignment ]
+  | `Buffer_alignment
+  | `Generic_error of string ]
 
 let pp_error ppf = function
   | #Mirage_block.error as e -> Mirage_block.pp_error ppf e
@@ -60,12 +61,14 @@ let pp_error ppf = function
   | `Unspecified_error -> Fmt.string ppf "Unspecified error"
   | `Buffer_alignment ->
       Fmt.string ppf "Invalid argument: buffers must be sector aligned"
+  | `Generic_error msg -> Fmt.string ppf msg
 
 type write_error =
   [ Mirage_block.write_error
   | `Invalid_argument
   | `Unspecified_error
-  | `Buffer_alignment ]
+  | `Buffer_alignment
+  | `Generic_error of string ]
 
 let pp_write_error ppf = function
   | #Mirage_block.write_error as e -> Mirage_block.pp_write_error ppf e
@@ -73,6 +76,7 @@ let pp_write_error ppf = function
   | `Unspecified_error -> Fmt.string ppf "Unspecified error"
   | `Buffer_alignment ->
       Fmt.string ppf "Invalid argument: buffers must be sector aligned"
+  | `Generic_error msg -> Fmt.string ppf msg
 
 let connect devid =
   let aux id =
@@ -124,7 +128,6 @@ let capped_buffer buffer limit =
   else (buffer, None)
 
 let generic_io io_kind t sector_start buffer =
-  Log.info (fun f -> f "generic_io: on dev #%d at %Ld" t.id sector_start);
   let max_size = uk_max_sectors_per_req t.handle * t.info.sector_size in
   let rec aux sector_start buffer =
     let capped, rest = capped_buffer buffer max_size in
@@ -145,35 +148,25 @@ let generic_io io_kind t sector_start buffer =
         else Lwt.return (Error `Unspecified_error)
     | Error msg ->
         let* () = Semaphore.release t.semaphore in
-        Log.info (fun f -> f "generic_io: %s" msg);
-        Lwt.return (Error `Unspecified_error)
+        Lwt.return (Error (`Generic_error msg))
   in
   aux sector_start buffer
 
-let rec read t sector_start buffers =
-  Log.info (fun f -> f "Read: on dev #%d at %Ld" t.id sector_start);
+let generic_ios io_kind t sector_start buffers =
+  let rec aux sector_start buffers =
   match buffers with
   | [] -> Lwt.return (Ok ())
   | buf :: tl -> (
       match check_bounds t sector_start buf with
       | Ok () -> (
-          generic_io uk_block_read t sector_start buf >>= function
+          generic_io io_kind t sector_start buf >>= function
           | Ok () ->
               let ssize = Cstruct.length buf / t.info.sector_size in
-              read t Int64.(add sector_start (of_int ssize)) tl
+              aux Int64.(add sector_start (of_int ssize)) tl
           | Error _ as e -> Lwt.return e)
       | Error _ as e -> Lwt.return e)
+  in
+  aux sector_start buffers
 
-let rec write t sector_start buffers =
-  Log.info (fun f -> f "Write: on dev #%d at %Ld" t.id sector_start);
-  match buffers with
-  | [] -> Lwt.return (Ok ())
-  | buf :: tl -> (
-      match check_bounds t sector_start buf with
-      | Ok () -> (
-          generic_io uk_block_write t sector_start buf >>= function
-          | Ok () ->
-              let ssize = Cstruct.length buf / t.info.sector_size in
-              read t Int64.(add sector_start (of_int ssize)) tl
-          | Error _ as e -> Lwt.return e)
-      | Error _ as e -> Lwt.return e)
+let read = generic_ios uk_block_read
+let write = generic_ios uk_block_write
