@@ -17,13 +17,7 @@
 #include <uk/print.h>
 #include <uk/alloc.h>
 
-#include "yield.h"
-
-#define MBU_DEBUG 0 /* FIXME */
-
-#ifdef MBU_DEBUG
-#define UK_DEBUG 1
-#endif /* !MBU_DEBUG */
+#include <yield.h>
 
 #define QUEUE_COUNT     1
 
