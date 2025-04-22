@@ -59,6 +59,16 @@ void req_callback(struct uk_blkreq *req, void *cookie)
   signal_block_request_ready(block->id, tok_id);
 }
 
+void queue_callback(struct uk_blkdev *dev, uint16_t queue_id, void *argp)
+{
+  (void)argp;
+
+  int rc = uk_blkdev_queue_finish_reqs(dev, 0);
+  if (rc) {
+    uk_pr_err("Error finishing request: %d\n", rc);
+  }
+}
+
 static void init_token(token_t *token, bool write, unsigned long offset,
     unsigned long size, char *buf)
 {
@@ -68,17 +78,6 @@ static void init_token(token_t *token, bool write, unsigned long offset,
       buf, req_callback, token);
 
   assert(!uk_blkreq_is_done(&token->req));
-}
-
-void queue_callback(struct uk_blkdev *dev, uint16_t queue_id, void *argp)
-{
-
-  block_t *block = (block_t*)argp;
-
-  int rc = uk_blkdev_queue_finish_reqs(dev, 0);
-  if (rc) {
-    uk_pr_err("Error finishing request: %d\n", rc);
-  }
 }
 
 static long block_io(block_t *block, int write, unsigned long sstart,
