@@ -238,8 +238,7 @@ value uk_block_init(value v_id)
     CAMLreturn(v_result);
   }
 
-  v_result = alloc_result_ok();
-  Store_field(v_result, 0, Val_ptr(block));
+  v_result = alloc_result_ok(Val_ptr(block));
 
   CAMLreturn(v_result);
 }
@@ -288,8 +287,7 @@ value uk_block_read(value v_block, value v_sstart, value v_size, value v_buffer,
   }
   token_id_t tokid = (token_id_t)rc;
   
-  v_result = alloc_result_ok();
-  Store_field(v_result, 0, Val_int(tokid));
+  v_result = alloc_result_ok(Val_int(tokid));
   CAMLreturn(v_result);
 }
 
@@ -319,8 +317,7 @@ value uk_block_write(value v_block, value v_sstart, value v_size,
     CAMLreturn(v_result);
   }
   
-  v_result = alloc_result_ok();
-  Store_field(v_result, 0, Val_int(tokid));
+  v_result = alloc_result_ok(Val_int(tokid));
   CAMLreturn(v_result);
 }
 
