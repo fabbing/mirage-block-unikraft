@@ -97,10 +97,6 @@ static long block_io(block_t *block, int write, unsigned long offset,
     return -1;
   }
 
-  //printf("uk_blkdev_queue_submit_one = %d (success: %s, more: %s)\n", rc,
-  //        (rc & UK_BLKDEV_STATUS_SUCCESS) ? "S" : "-",
-  //        (rc & UK_BLKDEV_STATUS_MORE) ? "M" : "-");
-
   return token_id(block, token);
 }
 
@@ -184,8 +180,6 @@ static int block_configure(block_t *block, const char **err)
     return -1;
   }
 
-  //printf("queue_info.nb_max = %d, .nb_min = %d, .nb_align = %d, nb_pow_two = %d\n",
-  //        q_info.nb_max, q_info.nb_min, q_info.nb_align, q_info.nb_is_power_of_two);
   assert(MAX_BLK_TOKENS < q_info.nb_max);
 
   struct uk_blkdev_queue_conf q_conf = { 0 };
@@ -263,8 +257,8 @@ value uk_block_info(value v_block)
   const struct uk_blkdev_cap* cap = uk_blkdev_capabilities(block->dev);
 
   v_result = caml_alloc(3, 0);
-  Store_field(v_result, 0, Val_true); // TODO
-  Store_field(v_result, 1, Val_int(cap->ssize)); // sector size
+  Store_field(v_result, 0, Val_true);                      // ready_write
+  Store_field(v_result, 1, Val_int(cap->ssize));           // sector size
   Store_field(v_result, 2, caml_copy_int64(cap->sectors)); // number of sectors
 
   CAMLreturn(v_result);
