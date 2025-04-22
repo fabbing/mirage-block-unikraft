@@ -1,3 +1,11 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+/*
+ * Authors: Fabrice Buoro <fabrice@tarides.com>
+ *
+ * Copyright (c) 2024-2025, Tarides.
+ *               All rights reserved.
+*/
+
 #ifndef RESULT_H
 #define RESULT_H
 

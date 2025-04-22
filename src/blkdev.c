@@ -1,3 +1,14 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+/*
+ * Authors: Simon Kuenzer <simon.kuenzer@neclab.eu>
+ *          Fabrice Buoro <fabrice@tarides.com>
+ *          Samuel Hym <samuel@tarides.com>
+ *
+ * Copyright (c) 2013-2017, NEC Europe Ltd., NEC Corporation.
+ *               2024-2025, Tarides.
+ *               All rights reserved.
+*/
+
 #include "block.h"
 #include "result.h"
 
