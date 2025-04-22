@@ -176,7 +176,7 @@ static int block_configure(block_t *block, const char **err)
 
   //printf("queue_info.nb_max = %d, .nb_min = %d, .nb_align = %d, nb_pow_two = %d\n",
   //        q_info.nb_max, q_info.nb_min, q_info.nb_align, q_info.nb_is_power_of_two);
-  assert(MAX_BLK_TOKENS < queue_info.nb_max);
+  assert(MAX_BLK_TOKENS < q_info.nb_max);
 
   struct uk_blkdev_queue_conf q_conf = { 0 };
   q_conf.a = block->alloc;
