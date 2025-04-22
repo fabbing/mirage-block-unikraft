@@ -120,6 +120,14 @@ static block_t *block_init(unsigned int id)
   return block;
 }
 
+static void block_deinit(block_t *block)
+{
+  if (block->tokens) {
+    free(block->tokens);
+  }
+  block->infly = 0;
+}
+
 static block_t *block_get(unsigned int id, const char **err)
 {
   block_t *block;
@@ -133,12 +141,14 @@ static block_t *block_get(unsigned int id, const char **err)
   block->dev = uk_blkdev_get(id);
   if (!block->dev) {
     *err = "Failed to acquire block device";
+    block_deinit(block);
     return NULL;
   }
 
   block->alloc = uk_alloc_get_default();
   if (!block->alloc) {
     *err = "Failed to get default allocator";
+    block_deinit(block);
     return NULL;
   }
   return block;
@@ -243,7 +253,6 @@ value uk_block_init(value v_id)
   }
 
   v_result = alloc_result_ok(Val_ptr(block));
-
   CAMLreturn(v_result);
 }
 
@@ -253,14 +262,12 @@ value uk_block_info(value v_block)
   CAMLlocal1(v_result);
 
   block_t *block = (block_t*)Ptr_val(v_block);
-
   const struct uk_blkdev_cap* cap = uk_blkdev_capabilities(block->dev);
 
   v_result = caml_alloc(3, 0);
   Store_field(v_result, 0, Val_true);                      // ready_write
   Store_field(v_result, 1, Val_int(cap->ssize));           // sector size
   Store_field(v_result, 2, caml_copy_int64(cap->sectors)); // number of sectors
-
   CAMLreturn(v_result);
 }
 
