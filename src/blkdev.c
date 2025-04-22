@@ -81,7 +81,7 @@ void queue_callback(struct uk_blkdev *dev, uint16_t queue_id, void *argp)
   }
 }
 
-static long block_io(block_t *block, int write, unsigned long offset,
+static long block_io(block_t *block, int write, unsigned long sstart,
     unsigned long size, char *buf)
 {
 
@@ -89,7 +89,7 @@ static long block_io(block_t *block, int write, unsigned long offset,
   if (!token) {
     return -1;
   }
-  init_token(token, write, offset, size, buf);
+  init_token(token, write, sstart, size, buf);
 
   int rc = uk_blkdev_queue_submit_one(block->dev, 0, &token->req);
   if (rc < 0) {
