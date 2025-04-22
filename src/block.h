@@ -31,11 +31,11 @@ struct token_s {
 };
 
 typedef struct block_s {
-  struct uk_blkdev  *dev;
-  struct uk_alloc   *alloc;
-  token_t           *tokens;
-  unsigned long     infly;
-  unsigned int      id;
+  struct uk_blkdev      *dev;
+  struct uk_alloc       *alloc;
+  unsigned int          id;
+  _Atomic unsigned long infly;
+  token_t               *tokens;
 } block_t;
 
 
