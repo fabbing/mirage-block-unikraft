@@ -26,16 +26,16 @@ typedef struct token_s token_t;
 typedef unsigned int token_id_t;
 
 struct token_s {
-  struct uk_blkreq  req;
-  struct block_s    *block;
+  struct uk_blkreq      req;
+  struct block_s        *block;
 };
 
 typedef struct block_s {
-  struct uk_blkdev      *dev;
+  struct uk_blkdev      *dev;     // Underlying Unikraft blkdev
   struct uk_alloc       *alloc;
-  unsigned int          id;
-  _Atomic unsigned long infly;
-  token_t               *tokens;
+  unsigned int          id;       // Identifier of the Unikraft blkdev
+  _Atomic unsigned long infly;    // Bit field marking pending IO request
+  token_t               *tokens;  // Stores request parameters and result
 } block_t;
 
 
