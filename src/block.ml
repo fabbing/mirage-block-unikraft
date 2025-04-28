@@ -170,4 +170,8 @@ let generic_ios io_kind t sector_start buffers =
   aux sector_start buffers
 
 let read = generic_ios uk_block_read
-let write = generic_ios uk_block_write
+
+let write t sector_start buffers =
+  let* info = get_info t in
+  if not info.read_write then Lwt.return (Error `Is_read_only)
+  else generic_ios uk_block_write t sector_start buffers
