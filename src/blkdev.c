@@ -80,7 +80,7 @@ static void init_token(token_t *token, bool write, unsigned long sstart,
   assert(!uk_blkreq_is_done(&token->req));
 }
 
-static long block_io(block_t *block, int write, unsigned long sstart,
+token_id_t block_io(block_t *block, int write, unsigned long sstart,
     unsigned long size, char *buf)
 {
 
