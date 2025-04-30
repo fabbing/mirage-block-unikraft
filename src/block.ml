@@ -135,8 +135,7 @@ let perform io_op t sector_start buffer =
     let ssize = Cstruct.length capped / t.info.sector_size in
     let* () = Semaphore.acquire t.semaphore in
     match
-      io_op t.handle sector_start ssize capped.Cstruct.buffer
-        capped.Cstruct.off
+      io_op t.handle sector_start ssize capped.Cstruct.buffer capped.Cstruct.off
     with
     | Ok tokid ->
         let* () = Unikraft_os.Main.UkEngine.wait_for_work_blkdev t.id tokid in
