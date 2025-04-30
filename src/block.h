@@ -34,7 +34,7 @@ typedef struct block_s {
   struct uk_blkdev      *dev;     // Underlying Unikraft blkdev
   struct uk_alloc       *alloc;
   unsigned int          id;       // Identifier of the Unikraft blkdev
-  _Atomic unsigned long infly;    // Bit field marking pending IO request
+  _Atomic unsigned long infly;    // Bit field marking pending IO requests
   token_t               *tokens;  // Stores request parameters and result
 } block_t;
 
