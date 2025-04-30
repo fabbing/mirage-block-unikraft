@@ -216,7 +216,7 @@ static int block_configure(block_t *block, const char **err)
 
   const struct uk_blkdev_cap* cap = uk_blkdev_capabilities(block->dev);
   if (cap->mode == O_WRONLY) {
-    *err = "Device in write-only mode are not supported";
+    *err = "Write-only devices are not supported";
     return -1;
   }
 
