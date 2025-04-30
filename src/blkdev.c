@@ -222,7 +222,7 @@ static int block_configure(block_t *block, const char **err)
 
   rc = uk_blkdev_queue_intr_enable(block->dev, 0);
   if (rc) {
-    *err = "Error enalbing interrupt for block device queue";
+    *err = "Error enabling interrupt for block device queue";
     return -1;
   }
   return 0;
