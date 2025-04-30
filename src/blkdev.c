@@ -270,8 +270,8 @@ value uk_block_info(value v_block)
   const struct uk_blkdev_cap* cap = uk_blkdev_capabilities(block->dev);
 
   v_result = caml_alloc(3, 0);
-  // read_write
   Store_field(v_result, 0, (cap->mode == O_RDONLY) ? Val_false : Val_true);
+                                                           // read_write
   Store_field(v_result, 1, Val_int(cap->ssize));           // sector size
   Store_field(v_result, 2, caml_copy_int64(cap->sectors)); // number of sectors
   CAMLreturn(v_result);
