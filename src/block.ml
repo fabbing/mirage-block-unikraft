@@ -151,21 +151,20 @@ let perform io_op t sector_start buffer =
         let* () = Semaphore.release t.semaphore in
         Lwt.return (Error (`Generic_error msg))
   in
-  aux sector_start buffer
+  match check_bounds t sector_start buffer with
+  | Ok () -> aux sector_start buffer
+  | Error _ as e -> Lwt.return e
 
 let perform io_op t sector_start buffers =
   let rec aux sector_start buffers =
-  match buffers with
-  | [] -> Lwt.return (Ok ())
-  | buf :: tl -> (
-      match check_bounds t sector_start buf with
-      | Ok () -> (
-          perform io_op t sector_start buf >>= function
-          | Ok () ->
-              let ssize = Cstruct.length buf / t.info.sector_size in
-              aux Int64.(add sector_start (of_int ssize)) tl
-          | Error _ as e -> Lwt.return e)
-      | Error _ as e -> Lwt.return e)
+    match buffers with
+    | [] -> Lwt.return (Ok ())
+    | buf :: tl -> (
+        perform io_op t sector_start buf >>= function
+        | Ok () ->
+            let ssize = Cstruct.length buf / t.info.sector_size in
+            aux Int64.(add sector_start (of_int ssize)) tl
+        | Error _ as e -> Lwt.return e)
   in
   aux sector_start buffers
 
