@@ -128,14 +128,14 @@ let capped_buffer buffer limit =
     (capped, Some rest)
   else (buffer, None)
 
-let generic_io io_kind t sector_start buffer =
+let perform io_op t sector_start buffer =
   let max_size = uk_max_sectors_per_req t.handle * t.info.sector_size in
   let rec aux sector_start buffer =
     let capped, rest = capped_buffer buffer max_size in
     let ssize = Cstruct.length capped / t.info.sector_size in
     let* () = Semaphore.acquire t.semaphore in
     match
-      io_kind t.handle sector_start ssize capped.Cstruct.buffer
+      io_op t.handle sector_start ssize capped.Cstruct.buffer
         capped.Cstruct.off
     with
     | Ok tokid ->
@@ -153,14 +153,14 @@ let generic_io io_kind t sector_start buffer =
   in
   aux sector_start buffer
 
-let generic_ios io_kind t sector_start buffers =
+let perform io_op t sector_start buffers =
   let rec aux sector_start buffers =
   match buffers with
   | [] -> Lwt.return (Ok ())
   | buf :: tl -> (
       match check_bounds t sector_start buf with
       | Ok () -> (
-          generic_io io_kind t sector_start buf >>= function
+          perform io_op t sector_start buf >>= function
           | Ok () ->
               let ssize = Cstruct.length buf / t.info.sector_size in
               aux Int64.(add sector_start (of_int ssize)) tl
@@ -169,9 +169,9 @@ let generic_ios io_kind t sector_start buffers =
   in
   aux sector_start buffers
 
-let read = generic_ios uk_block_read
+let read = perform uk_block_read
 
 let write t sector_start buffers =
   let* info = get_info t in
   if not info.read_write then Lwt.return (Error `Is_read_only)
-  else generic_ios uk_block_write t sector_start buffers
+  else perform uk_block_write t sector_start buffers
