@@ -69,17 +69,6 @@ void queue_callback(struct uk_blkdev *dev, uint16_t queue_id, void *argp)
   }
 }
 
-static void init_token(token_t *token, bool write, unsigned long sstart,
-    unsigned long size, char *buf)
-{
-  struct uk_blkreq *req = &token->req;
-
-  uk_blkreq_init(req, write ? UK_BLKREQ_WRITE : UK_BLKREQ_READ, sstart, size,
-      buf, req_callback, token);
-
-  assert(!uk_blkreq_is_done(&token->req));
-}
-
 token_id_t block_io(block_t *block, int write, unsigned long sstart,
     unsigned long size, char *buf)
 {
@@ -88,7 +77,11 @@ token_id_t block_io(block_t *block, int write, unsigned long sstart,
   if (!token) {
     return -1;
   }
-  init_token(token, write, sstart, size, buf);
+
+  struct uk_blkreq *req = &token->req;
+  uk_blkreq_init(req, write ? UK_BLKREQ_WRITE : UK_BLKREQ_READ, sstart, size,
+      buf, req_callback, token);
+  assert(!uk_blkreq_is_done(&token->req));
 
   int rc = uk_blkdev_queue_submit_one(block->dev, 0, &token->req);
   if (rc < 0) {
