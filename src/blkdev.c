@@ -26,9 +26,9 @@ static token_t *acquire_token(block_t *block)
 
   for (unsigned int i = 0; i < MAX_BLK_TOKENS; i++) {
     unsigned long pos = 1L << i;
-    if ((block->infly & pos) == 0) {
+    if ((block->inflight & pos) == 0) {
       token = &block->tokens[i];
-      block->infly |= pos;
+      block->inflight |= pos;
       return token;
     }
   }
@@ -46,7 +46,7 @@ static void release_token(block_t *block, token_t *token)
   token_id_t id = token_id(block, token);
 
   unsigned long mask = ~(1L << id);
-  block->infly &= mask;
+  block->inflight &= mask;
 }
 
 void req_callback(struct uk_blkreq *req, void *cookie)
@@ -114,7 +114,7 @@ static block_t *block_init(unsigned int id)
     block->tokens[i].block = block;
   }
 
-  block->infly = 0;
+  block->inflight = 0;
   block->id = id;
   return block;
 }
@@ -124,7 +124,7 @@ static void block_deinit(block_t *block)
   if (block->tokens) {
     free(block->tokens);
   }
-  block->infly = 0;
+  block->inflight = 0;
 }
 
 static block_t *block_get(unsigned int id, const char **err)

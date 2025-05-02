@@ -34,7 +34,11 @@ typedef struct block_s {
   struct uk_blkdev      *dev;     // Underlying Unikraft blkdev
   struct uk_alloc       *alloc;
   unsigned int          id;       // Identifier of the Unikraft blkdev
-  _Atomic unsigned long infly;    // Bit field marking pending IO requests
+  _Atomic unsigned long inflight; // Bit field marking pending IO requests
+                                  // Must be atomic to allow concurrent access
+                                  // during the queue callback by the interupts
+                                  // thread, and during block_io/complete_io by
+                                  // the main thread.
   token_t               *tokens;  // Stores request parameters and result
 } block_t;
 
