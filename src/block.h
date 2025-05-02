@@ -19,8 +19,6 @@
 
 #include <yield.h>
 
-#define QUEUE_COUNT     1
-
 struct token_s;
 typedef struct token_s token_t;
 typedef unsigned int token_id_t;

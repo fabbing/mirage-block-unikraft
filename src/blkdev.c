@@ -162,13 +162,8 @@ static int block_configure(block_t *block, const char **err)
     return -1;
   }
 
-  if (QUEUE_COUNT > info.max_queues) {
-    *err = "Number of queue not supported";
-    return -1;
-  }
-
   struct uk_blkdev_conf conf = { 0 };
-  conf.nb_queues = QUEUE_COUNT;
+  conf.nb_queues = 1;
   rc = uk_blkdev_configure(block->dev, &conf);
   if (rc) {
     *err = "Error configuring device";
