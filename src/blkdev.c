@@ -9,6 +9,8 @@
  *               All rights reserved.
 */
 
+#ifdef __Unikraft__
+
 #include "block.h"
 #include "result.h"
 
@@ -370,3 +372,5 @@ value uk_max_sectors_per_req(value v_block)
   int sectors = uk_blkdev_max_sec_per_req(block->dev);
   CAMLreturn(Val_int(sectors));
 }
+
+#endif /* __Unikraft__ */
