@@ -31,10 +31,10 @@ static token_t *acquire_token(block_t *block)
     if ((block->inflight & pos) == 0) {
       token = &block->tokens[i];
       block->inflight |= pos;
+      assert(uk_blkreq_is_done(&token->req));
       return token;
     }
   }
-  assert(uk_blkreq_is_done(&token->req));
   return NULL;
 }
 
