@@ -1,7 +1,7 @@
 (lang dune 3.0)
 (generate_opam_files)
 
-(source (github fabbing/mirage-block-unikraft))
+(source (github mirage/mirage-block-unikraft))
 (license BSD-3)
 (authors "Fabrice Buoro <fabrice@tarides.com>" "Samuel Hym <samuel@tarides.com>")
 (maintainers "team@mirage.org")
@@ -10,6 +10,7 @@
  (name mirage-block-unikraft)
  (synopsis "Unikraft implementation of MirageOS block interface")
  (description "This library implements the MirageOS block interface for Unikraft targets.")
+ (tags ("org:mirage"))
  (depends
   (ocaml (>= "5.2.0"))
   (dune  (>= "3.0"))
