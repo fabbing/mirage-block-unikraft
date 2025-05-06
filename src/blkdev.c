@@ -27,12 +27,15 @@ static token_t *acquire_token(block_t *block)
   token_t *token;
 
   for (unsigned int i = 0; i < MAX_BLK_TOKENS; i++) {
-    unsigned long pos = 1L << i;
-    if ((block->inflight & pos) == 0) {
-      token = &block->tokens[i];
-      block->inflight |= pos;
-      assert(uk_blkreq_is_done(&token->req));
-      return token;
+    const unsigned long pos = 1L << i;
+    unsigned long old = block->inflight;
+    if ((old & pos) == 0) {
+      const unsigned long new = old | pos;
+      if (atomic_compare_exchange_strong(&block->inflight, &old, new)) {
+        token = &block->tokens[i];
+        assert(uk_blkreq_is_done(&token->req));
+        return token;
+      }
     }
   }
   return NULL;
