@@ -138,7 +138,7 @@ let perform io_op t sector_start buffer =
       io_op t.handle sector_start ssize capped.Cstruct.buffer capped.Cstruct.off
     with
     | Ok tokid ->
-        let* () = Unikraft_os.Main.UkEngine.wait_for_work_blkdev t.id tokid in
+        let* () = Unikraft_os.Main.Uk_Engine.wait_for_work_blkdev t.id tokid in
         let ok = uk_complete_io t.handle tokid in
         let* () = Semaphore.release t.semaphore in
         if ok then
