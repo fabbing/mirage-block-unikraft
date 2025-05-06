@@ -71,7 +71,7 @@ void queue_callback(struct uk_blkdev *dev, uint16_t queue_id, void *argp)
   }
 }
 
-token_id_t block_io(block_t *block, int write, unsigned long sstart,
+stoken_id_t block_io(block_t *block, int write, unsigned long sstart,
     unsigned long size, char *buf)
 {
 
@@ -269,8 +269,8 @@ value uk_block_info(value v_block)
 
 // -------------------------------------------------------------------------- //
 
-static long block_read(block_t *block, unsigned long sstart, unsigned long size,
-    char *buffer)
+static stoken_id_t block_read(block_t *block, unsigned long sstart,
+        unsigned long size, char *buffer)
 {
   return block_io(block, 0, sstart, size, buffer);
 }
@@ -287,7 +287,7 @@ value uk_block_read(value v_block, value v_sstart, value v_size, value v_buffer,
   unsigned long sstart = Int64_val(v_sstart);
   unsigned long size = Long_val(v_size);
 
-  long rc = block_read(block, sstart, size, buf);
+  const stoken_id_t rc = block_read(block, sstart, size, buf);
   if (rc < 0) {
     v_result = alloc_result_error("uk_block_read: error");
     CAMLreturn(v_result);
@@ -300,7 +300,7 @@ value uk_block_read(value v_block, value v_sstart, value v_size, value v_buffer,
 
 // -------------------------------------------------------------------------- //
 
-static long block_write(block_t *block, unsigned long sstart,
+static stoken_id_t block_write(block_t *block, unsigned long sstart,
     unsigned long size, char *buffer)
 {
   return block_io(block, 1, sstart, size, buffer);
@@ -318,11 +318,12 @@ value uk_block_write(value v_block, value v_sstart, value v_size,
   unsigned long sstart = Int64_val(v_sstart);
   unsigned long size = Long_val(v_size);
 
-  const int tokid = block_write(block, sstart, size, buf);
-  if (tokid < 0) {
+  const stoken_id_t rc = block_write(block, sstart, size, buf);
+  if (rc < 0) {
     v_result = alloc_result_error("uk_block_write: error");
     CAMLreturn(v_result);
   }
+  token_id_t tokid = (token_id_t)rc;
   
   v_result = alloc_result_ok(Val_int(tokid));
   CAMLreturn(v_result);
