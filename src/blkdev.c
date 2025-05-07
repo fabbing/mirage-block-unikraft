@@ -29,7 +29,7 @@ static token_t *acquire_token(block_t *block)
   for (unsigned int i = 0; i < MAX_BLK_TOKENS; i++) {
     const unsigned long pos = 1L << i;
     unsigned long old = block->inflight;
-    if ((old & pos) == 0) {
+    while ((old & pos) == 0) {
       const unsigned long new = old | pos;
       if (atomic_compare_exchange_strong(&block->inflight, &old, new)) {
         token = &block->tokens[i];
